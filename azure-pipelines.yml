@@ -1,31 +1,16 @@
-# Maven
-# Build your Java project and run tests with Apache Maven.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/java
-# This is an example of using VeraDemo Java test application with the Veracode Static Pipeline scanner.  A Veracode subscription is required.
 trigger:
 - main
 pool:
-  vmImage: 'ubuntu-latest'
+  name: default
 steps:
-- task: Maven@3
-  displayName: Build with Maven
-  inputs:
-    mavenPomFile: 'app/pom.xml'
-    mavenOptions: '-Xmx3072m'
-    javaHomeOption: 'JDKVersion'
-    jdkVersionOption: '1.8'
-    jdkArchitectureOption: 'x64'
-    publishJUnitResults: true
-    testResultsFiles: '**/surefire-reports/TEST-*.xml'
-    goals: 'package'
 - task: Bash@3
-  displayName: Veracode Pipeline
   inputs:
     targetType: 'inline'
+  env:
+    VERACODE_API_KEY: $(VERACODE_API_KEY)
     script: |
-      curl -sSO https://downloads.veracode.com/securityscan/pipeline-scan-LATEST.zip
-      unzip -o pipeline-scan-LATEST.zip
-      java -jar pipeline-scan.jar -vid $(VERACODE_API_ID) -vkey $(VERACODE_API_KEY) -f /home/vsts/work/1/s/app/target/verademo.war || true
-- publish: $(System.DefaultWorkingDirectory)/results.json
-  artifact: VeracodeBaseline
+      # Write your commands here
+      VERACODE_WRAPPER_VERSION=$(curl -sS "https://search.maven.org/solrsearch/select?q=g:%22com.veracode.vosp.api.wrappers%22&rows=20&wt=json" | jq -r '.response.docs[0].latestVersion') && curl -sS -o veracode-wrapper.jar "https://repo1.maven.org/maven2/com/veracode/vosp/api/wrappers/vosp-api-wrappers-java/${VERACODE_WRAPPER_VERSION}/vosp-api-wrappers-java-${VERACODE_WRAPPER_VERSION}.jar"
+      java -jar veracode-wrapper.jar -vid $VERACODE_API_ID -vkey $VERACODE_API_KEY -action PromoteSandbox -buildid 28649112
+#      java -jar veracode-wrapper.jar -credprofile default -action PromoteSandbox -buildid 28649112
+
